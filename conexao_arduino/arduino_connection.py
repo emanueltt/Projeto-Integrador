@@ -1,7 +1,7 @@
 import serial
 import threading as th
 import time
-from modules.timer import TimerSeconds
+from .modules.timer import TimerSeconds
 
 
 class ArduinoConnection:
