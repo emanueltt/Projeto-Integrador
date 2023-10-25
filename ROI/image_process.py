@@ -77,9 +77,17 @@ def process_image(img):
     img_lines = img_gray
     draw_line_1(img_lines, line_1_global, color=255, linewidth=4, transparency=0.0)
     draw_line_1(img_lines, line_2_global, color=255, linewidth=4, transparency=0.0)
-    # draw_line_1(img_lines, line_3_global, color=255, linewidth=4, transparency=0.0)
 
-    # print("Line 1-2 distance:\t", line_2_global[0] - line_1_global[0])
-    # print("Line 2-3 distance:\t", line_3_global[0] - line_2_global[0], "\n")
+    text_distance = f"{line_2_global[0] - line_1_global[0]} px"
+    img_lines = cv2.putText(
+        img_lines,
+        text=text_distance,
+        org=(10, 30),
+        fontFace=cv2.FONT_HERSHEY_PLAIN,
+        fontScale=2,
+        color=(255, 255, 255),
+        thickness=2
+    )
+    # draw_line_1(img_lines, line_3_global, color=255, linewidth=4, transparency=0.0)
 
     return img_lines
