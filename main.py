@@ -40,7 +40,8 @@ def run_camera_loop():
         _, frame = camera.read()
         frame_counter += 1
 
-        # Define the coordinates of the top-left and bottom-right corners of the region you want to crop
+        # Define the coordinates of the top-left and bottom-right corners of the region
+        # you want to crop
         x1, y1 = 200, 170  # Top-left corner
         x2, y2 = 900, 360  # Bottom-right corner
 
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     #
     # Example usage
     #
-    serial_port = "/dev/ttyACM0"  # Replace with the actual port
+    serial_port = "/dev/ttyACM0"
     arduino_conn = ArduinoConnection(serial_port)
     print("Connecting...")
     arduino_conn.connect()
