@@ -17,8 +17,8 @@ void loop() {
     /* Serial.print("light [%]: "); */
     Serial.println(light / 255 * 100);
 
-    if(light > 200) analogWrite(LED_PIN, HIGH);
-    else analogWrite(LED_PIN, LOW);
+    // if(light > 200) analogWrite(LED_PIN, HIGH);
+    // else analogWrite(LED_PIN, LOW);
 
     // if(Serial.available() > 0) {
     //     brightness = Serial.parseInt();
