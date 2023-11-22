@@ -4,19 +4,8 @@ import serial
 from threading import Thread
 from tkinter import *
 import customtkinter as CT
-
-"""
-TODO:
-- Botão Iniciar Experimento: aciona o motor
-- Botão Direção: mudar o sentido da corrente pela ponte H, para tracionar ou soltar
-- Botão Configurar Tempo de Experimento: (talvez mostrar barra de progressão) por ex.: 10 segundos, depois
-disso desligar o motor
-- Botão Calibrar: envia comando pro algoritmo de CV para calibrar os pixels
-- Botão Focar Câmera: envia comando pro terminal que configura o foco da câmera
-- Checar por que a medição do sensor não tá certa
-
-ProgressBar
-"""
+import os
+import time
 
 # Constantes
 __arduino__ = True # Set to false when Arduino not connected
@@ -29,20 +18,38 @@ CT.set_appearance_mode("dark")
 CT.set_default_color_theme("green")
 
 class Interface:
-    def __init__(self) -> None:        
+    def __init__(self, master) -> None:        
         if __arduino__: 
             self.arduino = serial.Serial(arduino_port, baud_rate)
+        self.master = master
         self.sensor_readings = []
         self.running = False
-        self.time = 0
+        self.time = 0 # em segundos
         self.dir = 0 # 0 -> esquerda, 1 -> direita
     
     def start(self) -> None:
         print("Iniciando experimento...")
         print("Acionando motor...")
         self.clean_all()
-        self.running = True
-        read_thread.start()
+        if(not self.running):
+            if(self.time == 0):
+                print("Tempo de Experimento não configurado")
+                return
+            self.running = True
+            # Thread para fazer leitura da serial do Arduino
+            self.read_thread = Thread(target=self.read_sensor)
+            self.read_thread.daemon = True
+            self.read_thread.start()
+            self.master.after(self.time * 1000, self.stop)
+            buttons[0].configure(text="Parar experimento")
+        else:
+            self.stop()
+
+    def stop(self) -> None:
+        self.running = False
+        if hasattr(self, 'thread') and self.read_thread.is_alive():
+            self.read_thread.join()  # Wait for the thread to finish
+        buttons[0].configure(text="Iniciar experimento")
 
     def change_dir(self) -> None:
         print("Direção de movimento alterada")
@@ -52,27 +59,29 @@ class Interface:
         dialog = CT.CTkInputDialog(text="Tempo de ensaio:", title="Configurar Tempo de Experimento")
         try:
             self.time = int(dialog.get_input())
-            print("Tempo de Experimento configurado")
+            print(f"Tempo de Experimento configurado: {self.time} [s]")
         except Exception as e:
-            print("[ERROR] ", e)
+            print(f"[ERROR] {e}")
 
     def calibrate(self) -> None:
-        print("Algoritmo calibrado")
+        print("Calibrando algoritmo de visão computacional")
 
     def focus(self) -> None:
         print("Focando câmera...")
+        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c focus_absolute=4')
     
     def read_sensor(self) -> None:
         # while True:
         for i in range(self.time):
-            # print("Reading sensor values")
             if(self.running):
                 try:
                     value = self.arduino.readline().strip().decode('utf-8')
-                    print("value: ", value)
+                    print(f"Luminosidade: {value} [%]")
                     self.sensor_readings.append(value)
+                    progressbar.set((i + 1) / self.time)
+                    time.sleep(1)
                 except Exception as e:
-                    print("[ERROR] ", e)
+                    print(f"[ERROR] {e}")
                     pass
     
     def create_plot(self) -> None:
@@ -93,19 +102,16 @@ class Interface:
         self.ax.grid(True, linestyle='--', alpha=0.7)
         self.ax.legend(loc='upper right')
         self.canvas.draw()
-        root.after(thread_delay, self.update_plot)
+        self.master.after(thread_delay, self.update_plot)
 
     def clean_all(self) -> None:
         self.sensor_readings = []
+        progressbar.set(0)
 
 if __name__ == "__main__":
-    interface = Interface()
-
-    # Thread para fazer leitura da serial do Arduino
-    read_thread = Thread(target=interface.read_sensor)
-    read_thread.daemon = True
-
     root = CT.CTk()
+
+    interface = Interface(root)
 
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
@@ -153,9 +159,8 @@ if __name__ == "__main__":
     frame.columnconfigure(0, weight=1)
     frame.rowconfigure(len(buttons) // 3 + 1, weight=1)
 
-    progressbar = CT.CTkProgressBar(frame)
+    progress_var = CT.IntVar()
+    progressbar = CT.CTkProgressBar(frame, variable=progress_var, mode='determinate')
     progressbar.grid(row=len(buttons) // 3 + 1, column=2, padx=60, pady=10, sticky="ew")
-    progressbar.configure(mode="determinate")
-    progressbar.set(0.2)
 
     root.mainloop()
