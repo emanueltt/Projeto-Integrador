@@ -1,4 +1,5 @@
 #include "dcmotor.h"
+#include "Arduino.h"
 
 
 void DCMotor::Pinout(int in1, int in2)
