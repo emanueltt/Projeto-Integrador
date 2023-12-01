@@ -15,7 +15,8 @@ void running_loop()
         motor.Forward();
         // Lê sensor e envia valor
         Serial.println(sensorValue, 2);
-
+        delay(50)
+        
         // Lê comando do pc
         if (Serial.available() > 0)
         {

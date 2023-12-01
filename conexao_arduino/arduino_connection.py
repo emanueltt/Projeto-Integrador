@@ -1,7 +1,7 @@
 import serial
 import threading as th
 import time
-from .modules.timer import TimerSeconds
+from modules.timer import TimerSeconds
 
 
 class ArduinoConnection:
@@ -17,11 +17,10 @@ class ArduinoConnection:
         timer = TimerSeconds()
         timeout = 5
         while timer.elapsed_time() < timeout:
-            if self.serial_port.in_waiting > 0:
-                data = self.serial_port.readline().decode().strip()
-                if data == "A":
-                    return
-            self.serial_port.write(b'H')
+            self.send_data("H")
+            data = self.receive_data()
+            if data == "A":
+                return
             time.sleep(0.2)
         else:
             raise TimeoutError()
@@ -37,13 +36,12 @@ class ArduinoConnection:
         if self.serial_port.in_waiting > 0:
             data = self.serial_port.readline().decode().strip()
             if data:
-                # Send acknowledgment back to Arduino
-                self.serial_port.write(b'A')
-
                 return data
 
-    def send_command(self, command):
-        raise NotImplementedError()
+    def send_data(self, data: str):
+        if self.serial_port is None:
+            raise Exception("You need to connect to the Arduino board first!")
+        self.serial_port.write(data.encode())
 
     def close(self):
         if self.serial_port is not None:
@@ -54,17 +52,19 @@ class ArduinoConnection:
 
 
 def connection_thread(conn: ArduinoConnection):
+    timer = TimerSeconds()
     while True:
         try:
             data = conn.receive_data()
+            print("passou")
         except TypeError:
             print()
             break
-        if data is None:
-            print("Got no data")
-        else:
+        if data is not None:
             print(f"Got data: {data}")
-        time.sleep(1)
+        if timer.elapsed_time() >= 2:
+            conn.send_data("P")
+            break
 
 
 def run_camera_loop():
@@ -74,7 +74,7 @@ def run_camera_loop():
     # camera = cv2.VideoCapture(0)
 
     height = 480
-    width = int(height*1.5)
+    width = int(height * 1.5)
 
     camera.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     camera.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
@@ -101,23 +101,40 @@ def run_camera_loop():
     cv2.destroyAllWindows()
 
 
+def run_dummy_loop():
+    timer = TimerSeconds()
+    while True:
+        if timer.elapsed_time() >= 5:
+            break
+
+
 if __name__ == "__main__":
     #
     # Example usage
     #
 
-    serial_port = '/dev/ttyACM0'  # Replace with the actual port
+    serial_port = "/dev/ttyACM0"  # Replace with the actual port
     arduino_conn = ArduinoConnection(serial_port)
     print("Connecting...")
     arduino_conn.connect()
     print("Connected!")
+    print("Sending start command")
+    arduino_conn.send_data("P")
+    arduino_conn.send_data("S")
 
-    conn_thread = th.Thread(target=connection_thread, args=[arduino_conn,])
+    conn_thread = th.Thread(
+        target=connection_thread,
+        args=[
+            arduino_conn,
+        ],
+    )
     conn_thread.daemon = True
     conn_thread.start()
 
     try:
-        run_camera_loop()
+        # run_camera_loop()
+        run_dummy_loop()
+
     except KeyboardInterrupt:
-        arduino_conn.close()
         conn_thread.join()
+        arduino_conn.close()
