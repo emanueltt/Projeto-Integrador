@@ -7,10 +7,11 @@ import queue
 
 class VisionControl:
     THREAD_TIMEOUT = 5  # in seconds
+    QUEUE_SIZE = 3
     
     def __init__(self):
         self._camera = None
-        self._measurement_data = queue.Queue(1)
+        self._measurement_data = queue.Queue(self.QUEUE_SIZE)
         self._running = False
 
         self.connect()
@@ -86,7 +87,10 @@ class VisionControl:
 
             # Put result into the queue
             process_result = "resultado distancia"
-            self._measurement_data.put(process_result)
+            try:
+                self._measurement_data.put_nowait(process_result)
+            except queue.Full:
+                continue
 
     def __del__(self):
         self.disconnect()

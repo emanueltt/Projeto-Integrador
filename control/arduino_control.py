@@ -6,10 +6,11 @@ import queue
 
 class ArduinoControl:
     THREAD_TIMEOUT = 5  # in seconds
+    QUEUE_SIZE = 3
     
     def __init__(self):
         self._arduino_conn = None
-        self._read_data = queue.Queue(1)
+        self._read_data = queue.Queue(self.QUEUE_SIZE)
         self._running = False
 
         self.connect()
@@ -53,7 +54,10 @@ class ArduinoControl:
     
     def _sensor_reader(self):
         while self._running:
-            self._read_data.put(self._arduino_conn.receive_data())
+            try:
+                self._read_data.put_nowait(self._arduino_conn.receive_data())
+            except queue.Full:
+                continue
 
     def __del__(self):
         self.disconnect()
