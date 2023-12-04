@@ -13,7 +13,7 @@ class LoadCell
 
 public:
     LoadCell();
-    float read(int sampleQuantity);
+    long read(int sampleQuantity);
     void set_scale(float scale);
     void tare();
 };

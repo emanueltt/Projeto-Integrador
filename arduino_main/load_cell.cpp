@@ -10,7 +10,7 @@ LoadCell::LoadCell(){
         5. Adjust the parameter in step 4 until you get an accurate reading.
     */
     loadCellSensor.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
-    loadCellSensor.set_scale = mScale;
+    loadCellSensor.set_scale(mScale);
 }
 
 long LoadCell::read(int sampleQuantity){

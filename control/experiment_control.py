@@ -30,10 +30,6 @@ class ExperimentControl:
     def calibrate(self):
         self._vision_control.calibrate_camera()
 
-    def __del__(self):
-        self._arduino_control.disconnect()
-        self._vision_control.disconnect()
-
 
 if __name__ == "__main__":
     from modules.timer import TimerSeconds
@@ -43,6 +39,10 @@ if __name__ == "__main__":
 
     experiment_ctrl.start_experiment()
     timer = TimerSeconds()
-    while timer.elapsed_time() < 2:
+    while timer.elapsed_time() < 10:
+        try:
+            print(experiment_ctrl.get_force_reading(), experiment_ctrl.get_measured_distance())
+        except Exception as exc:
+            print(f"{exc}")
         time.sleep(0.5)
     experiment_ctrl.stop_experiment()
