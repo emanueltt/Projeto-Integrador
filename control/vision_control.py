@@ -11,7 +11,7 @@ class VisionControl:
     
     def __init__(self):
         self._camera = None
-        self._measurement_data = queue.Queue(self.QUEUE_SIZE)
+        self._measurement_data_queue = queue.Queue(self.QUEUE_SIZE)
         self._running = False
 
         self.connect()
@@ -43,7 +43,7 @@ class VisionControl:
     def disconnect(self):
         self._running = False
         try:
-            self._measurement_data.get_nowait()
+            self._measurement_data_queue.get_nowait()
         except queue.Empty:
             pass
         self._camera.release()
@@ -59,7 +59,7 @@ class VisionControl:
 
     def get_measurement(self):
         try:
-            data = self._measurement_data.get_nowait()
+            data = self._measurement_data_queue.get_nowait()
             return data
         except queue.Empty:
             return None
@@ -86,9 +86,9 @@ class VisionControl:
             # Process image
 
             # Put result into the queue
-            process_result = "resultado distancia"
+            process_result = 10
             try:
-                self._measurement_data.put_nowait(process_result)
+                self._measurement_data_queue.put_nowait(process_result)
             except queue.Full:
                 continue
 

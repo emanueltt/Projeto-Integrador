@@ -44,5 +44,5 @@ if __name__ == "__main__":
             print(experiment_ctrl.get_force_reading(), experiment_ctrl.get_measured_distance())
         except Exception as exc:
             print(f"{exc}")
-        time.sleep(0.5)
+        time.sleep(0.07)
     experiment_ctrl.stop_experiment()

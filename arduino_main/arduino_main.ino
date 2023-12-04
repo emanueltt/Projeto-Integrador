@@ -10,12 +10,12 @@ void running_loop()
     motor.forward();
     
     LoadCell loadCell;
-
+    
     // Envio leitura
     while (true)
     {
         // Lê sensor e envia valor
-        Serial.println(loadCell.read(5), 2);
+        Serial.println(loadCell.read(5), 1);
         delay(50);
         
         // Lê comando do pc
@@ -74,6 +74,7 @@ void connection_loop()
 void setup()
 {
     Serial.begin(9600);
+    Serial.setTimeout(10);
     connection_loop();
 }
 

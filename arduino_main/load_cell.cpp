@@ -14,9 +14,7 @@ LoadCell::LoadCell(){
 }
 
 long LoadCell::read(int sampleQuantity){
-    loadCellSensor.power_up();
     long reading = loadCellSensor.get_units(sampleQuantity);
-    loadCellSensor.power_down();
     return reading;
 }
 

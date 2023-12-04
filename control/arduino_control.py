@@ -10,7 +10,7 @@ class ArduinoControl:
     
     def __init__(self):
         self._arduino_conn = None
-        self._read_data = queue.Queue(self.QUEUE_SIZE)
+        self._read_data_queue = queue.Queue(self.QUEUE_SIZE)
         self._running = False
 
         self.connect()
@@ -25,7 +25,7 @@ class ArduinoControl:
     def disconnect(self):
         self._running = False
         try:
-            self._read_data.get_nowait()
+            self._read_data_queue.get_nowait()
         except queue.Empty:
             pass
         self._arduino_conn.close()
@@ -33,7 +33,7 @@ class ArduinoControl:
 
     def read_sensor(self):
         try:
-            data = self._read_data.get_nowait()
+            data = self._read_data_queue.get_nowait()
             return data
         except queue.Empty:
             return None
@@ -55,7 +55,7 @@ class ArduinoControl:
     def _sensor_reader(self):
         while self._running:
             try:
-                self._read_data.put_nowait(self._arduino_conn.receive_data())
+                self._read_data_queue.put_nowait(self._arduino_conn.receive_data())
             except queue.Full:
                 continue
 
