@@ -1,20 +1,21 @@
 #include "dcmotor.h"
+#include "load_cell.h"
 
 
 void running_loop()
 {
     // Setup motor
     DCMotor motor;
-    motor.Pinout(5, 6);
-    motor.Forward();
+    motor.pinout(5, 6);
+    motor.forward();
+
+    LoadCell loadCell;
 
     // Envio leitura
-    float sensorValue = 123.45;
     while (true)
     {
-        motor.Forward();
         // Lê sensor e envia valor
-        Serial.println(sensorValue, 2);
+        Serial.println(loadCell.read(5), 2);
         delay(50)
         
         // Lê comando do pc
@@ -23,13 +24,13 @@ void running_loop()
             char command = Serial.read();
             if (command == 'P')
             {
-                motor.Stop();
+                motor.stop();
                 delay(200);
 
-                motor.Backward();
+                motor.backward();
                 delay(1000);
 
-                motor.Stop();
+                motor.stop();
                 break;
             }
         }
