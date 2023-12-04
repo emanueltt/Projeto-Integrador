@@ -3,12 +3,14 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import serial
 from threading import Thread
 from tkinter import *
+# from CTkMessagebox import CTkMessagebox
+import tkinter.messagebox as MessageBox
 import customtkinter as CT
 import os
 import time
 
 # Constantes
-__arduino__ = True # Set to false when Arduino not connected
+__arduino__ = False # False quando o Arduino não tiver conectado
 arduino_port = '/dev/ttyACM0'
 baud_rate = 9600
 thread_delay = 500 # ms
@@ -22,7 +24,8 @@ class Interface:
         if __arduino__: 
             self.arduino = serial.Serial(arduino_port, baud_rate)
         self.master = master
-        self.sensor_readings = []
+        self.max_readings = 50
+        self.sensor_readings = [0] * self.max_readings
         self.running = False
         self.time = 0 # em segundos
         self.dir = 0 # 0 -> esquerda, 1 -> direita
@@ -30,10 +33,11 @@ class Interface:
     def start(self) -> None:
         print("Iniciando experimento...")
         print("Acionando motor...")
-        self.clean_all()
+        # self.clean_all()
         if(not self.running):
             if(self.time == 0):
-                print("Tempo de Experimento não configurado")
+                MessageBox.showerror("Erro", "Tempo de Experimento não configurado")
+                # CTkMessagebox(title="Erro", message="Tempo de Experimento não configurado", icon="cancel")
                 return
             self.running = True
             # Thread para fazer leitura da serial do Arduino
@@ -50,6 +54,7 @@ class Interface:
         if hasattr(self, 'thread') and self.read_thread.is_alive():
             self.read_thread.join()  # Wait for the thread to finish
         buttons[0].configure(text="Iniciar experimento")
+        MessageBox.showinfo("Info", "Teste finalizado")
 
     def change_dir(self) -> None:
         print("Direção de movimento alterada")
@@ -68,6 +73,14 @@ class Interface:
 
     def focus(self) -> None:
         print("Focando câmera...")
+        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c auto_exposure=1')
+        time.sleep(0.2)
+        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c focus_automatic_continuous=0')
+        time.sleep(0.2)
+        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c exposure_time_absolute=500')
+        time.sleep(0.2)
+        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c focus_absolute=3')
+        time.sleep(0.2)
         os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c focus_absolute=4')
     
     def read_sensor(self) -> None:
@@ -77,12 +90,18 @@ class Interface:
                 try:
                     value = self.arduino.readline().strip().decode('utf-8')
                     print(f"Luminosidade: {value} [%]")
-                    self.sensor_readings.append(value)
+                    self.sensor_readings.append(int(value))
+                    self.sensor_readings = self.sensor_readings[-self.max_readings:]
                     progressbar.set((i + 1) / self.time)
-                    time.sleep(1)
+                    # time.sleep(1)
                 except Exception as e:
                     print(f"[ERROR] {e}")
+                    if(i == 5): self.sensor_readings.append(0.5)
+                    else: self.sensor_readings.append(i) # adicionando dado fake, só pra testar o plot
+                    progressbar.set((i + 1) / self.time)
+                    time.sleep(1)
                     pass
+        
     
     def create_plot(self) -> None:
         canvas_frame = CT.CTkFrame(frame)
