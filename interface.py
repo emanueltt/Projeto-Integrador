@@ -14,8 +14,6 @@ from modules.timer import TimerSeconds
 arduino_port = '/dev/ttyACM0'
 baud_rate = 9600
 thread_delay = 500 # ms
-y_min = 0
-y_max = 100 # [%]
 CT.set_appearance_mode("dark")
 CT.set_default_color_theme("green")
 
@@ -25,8 +23,6 @@ class Interface:
         self.sensor_readings_x = []
         self.sensor_readings_y = []
         self.running = False
-        self.speed = 0 # [1 ~ 255 PWM]
-        self.dir = 0 # 0 -> esquerda, 1 -> direita
         self.experiment_ctrl = ExperimentControl()
         self.max_time = 15 # [s]
         self.focus_value = 0 # 0 ~ 10
@@ -35,8 +31,8 @@ class Interface:
         self.read_thread = None
     
     def start(self) -> None:
-        self.experiment_ctrl.adjust_focus(5)
-        # self.clean_all()
+        print("[Interface] Iniciando experimento...")
+        self.clean_all()
         if(not self.running):
             print("[Interface] Iniciando experimento...")
             self.running = True
@@ -52,6 +48,7 @@ class Interface:
         self.experiment_ctrl.stop_experiment()
         self.running = False
         buttons[0].configure(text="Iniciar experimento")
+        print("Teste finalizado")
         MessageBox.showinfo("Info", "Teste finalizado")
 
     def calibrate(self) -> None:
@@ -102,14 +99,12 @@ class Interface:
         canvas_frame = CT.CTkFrame(frame)
         canvas_frame.grid(row=len(buttons) // 3 + 1, columnspan=3, pady=10)
         self.fig, self.ax = plt.subplots(figsize=(6, 4))
-        self.ax.set_ylim([y_min, y_max])
         self.canvas = FigureCanvasTkAgg(self.fig, master=canvas_frame)
         self.canvas.draw()
         self.canvas.get_tk_widget().grid(row=0, column=0)
         
     def update_plot(self) -> None:
         self.ax.clear()
-        # self.ax.plot(self.sensor_readings, color='green', linewidth=2, marker='o', markersize=5, label='Leitura do Sensor')
         self.ax.plot(self.sensor_readings_x, self.sensor_readings_y, color='green', linewidth=2, marker='o', markersize=5, label='Leitura do Sensor')
         self.ax.set_xlabel('Distância (mm)')
         self.ax.set_ylabel('Força (mN)')
@@ -120,15 +115,19 @@ class Interface:
         self.master.after(thread_delay, self.update_plot)
 
     def clean_all(self) -> None:
+        print("[Interface] clean all")
         self.sensor_readings_x = []
         self.sensor_readings_y = []
         progressbar.set(0)
         self.ax.clear()
+        # if(self.read_thread.is_alive()): self.read_thread.join()
 
     def increase(self) -> None:
+        print("[Interface] Increase")
         self.experiment_ctrl.increase_stress()
     
     def decrease(self) -> None:
+        print("[Interface] Decrease")
         self.experiment_ctrl.decrease_stress()
 
 if __name__ == "__main__":
