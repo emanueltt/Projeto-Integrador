@@ -7,17 +7,17 @@ void running_loop()
     // Setup motor
     DCMotor motor;
     motor.pinout(5, 6);
-    motor.forward();
+    motor.speed(200);
     
     LoadCell loadCell;
     loadCell.tare();
     
+    motor.forward();
     // Envio leitura
     while (true)
     {
         // Lê sensor e envia valor
-        Serial.println(loadCell.read(2), 1);
-        delay(50);
+        Serial.println(loadCell.read(1), 1);
         
         // Lê comando do pc
         if (Serial.available() > 0)

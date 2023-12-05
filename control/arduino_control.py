@@ -1,12 +1,13 @@
 from conexao_arduino.arduino_connection import ArduinoConnection
 
 import threading as th
+import time
 import queue
 
 
 class ArduinoControl:
     THREAD_TIMEOUT = 5  # in seconds
-    QUEUE_SIZE = 3
+    QUEUE_SIZE = 1
     
     def __init__(self):
         self._arduino_conn = None
@@ -33,7 +34,7 @@ class ArduinoControl:
 
     def read_sensor(self):
         try:
-            data = self._read_data_queue.get_nowait()
+            data = self._read_data_queue.get()
             return data
         except queue.Empty:
             return None
@@ -57,7 +58,8 @@ class ArduinoControl:
             try:
                 self._read_data_queue.put_nowait(self._arduino_conn.receive_data())
             except queue.Full:
-                continue
+                pass
+            time.sleep(0.1)
 
     def __del__(self):
         self.disconnect()
