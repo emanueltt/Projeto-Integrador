@@ -39,47 +39,24 @@ class Interface:
     def start(self) -> None:
         print("[Interface] Iniciando experimento...")
         # self.clean_all()
-        self.experiment_ctrl.start_experiment()
-        timer = TimerSeconds()
-        elapsed_time = timer.elapsed_time()
-        while elapsed_time < self.max_time:
-            try:
-                self.force = self.experiment_ctrl.get_force_reading()
-                self.distance = self.experiment_ctrl.get_measured_distance()
-                print(self.force, self.distance)
-                self.sensor_readings_x.append(float(self.distance))
-                self.sensor_readings_y.append(float(self.force))
-                progressbar.set(elapsed_time / self.max_time)
-            except Exception as exc:
-                print(f"{exc}")
-            time.sleep(0.07)
-            elapsed_time = timer.elapsed_time()
-        self.experiment_ctrl.stop_experiment()
-        # if(not self.running):
-        #     if(self.speed == 0):
-        #         MessageBox.showerror("Erro", "Velocidade do motor não configurado")
-        #         return
-        #     self.running = True
-        #     # Thread para fazer leitura da serial do Arduino
-        #     self.read_thread = Thread(target=self.read_sensor)
-        #     self.read_thread.daemon = True
-        #     self.read_thread.start()
-        #     self.master.after(self.time * 1000, self.stop)
-        #     buttons[0].configure(text="Parar experimento")
-        # else:
-        #     self.stop()
+        if(not self.running):
+            # if(self.speed == 0):
+            #     MessageBox.showerror("Erro", "Velocidade do motor não configurado")
+            #     return
+            self.running = True
+            # Thread para fazer leitura dos dados do Arduino
+            self.read_thread = Thread(target=self.read_sensor)
+            self.read_thread.daemon = True
+            self.read_thread.start()
+            # self.master.after(self.time * 1000, self.stop)
+            buttons[0].configure(text="Parar experimento")
+        else:
+            self.stop()
 
     def stop(self) -> None:
-        # self.running = False
-        # if hasattr(self, 'thread') and self.read_thread.is_alive():
-        #     self.read_thread.join()  # Wait for the thread to finish
-        # buttons[0].configure(text="Iniciar experimento")
         self.experiment_ctrl.stop_experiment()
+        buttons[0].configure(text="Iniciar experimento")
         MessageBox.showinfo("Info", "Teste finalizado")
-
-    def change_dir(self) -> None:
-        print("[Interface] Direção de movimento alterada")
-        self.dir = switch.get()
 
     def set_time(self) -> None:
         dialog = CT.CTkInputDialog(text="Velocidade [1 ~ 255]:", title="Configurar Velocidade do Motor")
@@ -107,21 +84,23 @@ class Interface:
             MessageBox.showerror("Erro", e)
     
     def read_sensor(self) -> None:
-        while True:
-            if(self.running):
-                try:
-                    value = self.arduino.readline().strip().decode('utf-8')
-                    print(f"[Interface] Luminosidade: {value} [%]")
-                    self.sensor_readings.append(float(value))
-                    # progressbar.set((i + 1) / self.time)
-                    # time.sleep(1)
-                except Exception as e:
-                    print(f"[Interface] {e}")
-                    if(i == 5): self.sensor_readings.append(0.5)
-                    else: self.sensor_readings.append(i) # adicionando dado fake, só pra testar o plot
-                    # progressbar.set((i + 1) / self.time)
-                    time.sleep(1)
-                    pass
+        self.experiment_ctrl.start_experiment()
+        timer = TimerSeconds()
+        elapsed_time = timer.elapsed_time()
+        while elapsed_time < self.max_time:
+            try:
+                self.force = self.experiment_ctrl.get_force_reading()
+                self.distance = self.experiment_ctrl.get_measured_distance()
+                print(self.force, self.distance)
+                self.sensor_readings_x.append(float(self.distance))
+                self.sensor_readings_y.append(float(self.force))
+                progressbar.set(elapsed_time / self.max_time)
+            except Exception as exc:
+                print(f"{exc}")
+            time.sleep(0.07)
+            elapsed_time = timer.elapsed_time()
+        # self.experiment_ctrl.stop_experiment() # tá dentro de self.stop agora
+        self.stop()
         
     def create_plot(self) -> None:
         canvas_frame = CT.CTkFrame(frame)
@@ -134,9 +113,10 @@ class Interface:
         
     def update_plot(self) -> None:
         self.ax.clear()
-        self.ax.plot(self.sensor_readings, color='green', linewidth=2, marker='o', markersize=5, label='Leitura do Sensor')
-        self.ax.set_xlabel('Tempo')
-        self.ax.set_ylabel('Sensor')
+        # self.ax.plot(self.sensor_readings, color='green', linewidth=2, marker='o', markersize=5, label='Leitura do Sensor')
+        self.ax.plot(self.sensor_readings_x, self.sensor_readings_y, color='green', linewidth=2, marker='o', markersize=5, label='Leitura do Sensor')
+        self.ax.set_xlabel('Distância')
+        self.ax.set_ylabel('Força')
         self.ax.set_title('Leitura do Sensor em Tempo Real')
         self.ax.grid(True, linestyle='--', alpha=0.7)
         self.ax.legend(loc='upper right')
@@ -144,9 +124,16 @@ class Interface:
         self.master.after(thread_delay, self.update_plot)
 
     def clean_all(self) -> None:
-        self.sensor_readings = []
+        self.sensor_readings_x = []
+        self.sensor_readings_y = []
         progressbar.set(0)
         self.ax.clear()
+
+    def increase(self) -> None:
+        self.experiment_ctrl.increase_stress()
+    
+    def decrease(self) -> None:
+        self.experiment_ctrl.decrease_stress()
 
 if __name__ == "__main__":
     root = CT.CTk()
@@ -165,14 +152,14 @@ if __name__ == "__main__":
         'Iniciar experimento',
         'Configurar Velocidade do Motor',
         'Calibrar algoritmo',
-        'Focar câmera'
+        'Focar câmera',
     ]
 
     button_commands = [
         interface.start,
         interface.set_time,
         interface.calibrate,
-        interface.focus,
+        interface.focus
     ]
 
     buttons = [CT.CTkButton(frame, text=text, width=200, height=60, command=cmd) 
@@ -186,11 +173,17 @@ if __name__ == "__main__":
     for i in range(3):
         frame.columnconfigure(i, weight=1)
 
-    switch = CT.CTkSwitch(master=frame, text="Mudar sentido", command=interface.change_dir)
-    switch.grid(row=1, column=1, padx=10, pady=10)
-
     interface.create_plot()
     root.after(thread_delay, interface.update_plot)
+
+    increase_decrease_frame = CT.CTkFrame(frame)
+    increase_decrease_frame.grid(row=1, column=1, columnspan=1, pady=10)
+
+    increase_button = CT.CTkButton(increase_decrease_frame, text="+", width=100, height=60, command=interface.increase)
+    increase_button.grid(row=0, column=0, padx=5)
+
+    decrease_button = CT.CTkButton(increase_decrease_frame, text="-", width=100, height=60, command=interface.decrease)
+    decrease_button.grid(row=0, column=1, padx=5)
 
     plot_button = CT.CTkButton(frame, text="Limpar", command=interface.clean_all)
     plot_button.grid(row=len(buttons) // 3, column=2, pady=10)
