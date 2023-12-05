@@ -7,6 +7,139 @@ from .libs import draw_line_1
 
 # %matplotlib inline
 
+def calibra_px_cm(img):
+    img_gray = img[100:450, 1220:img.shape[1]].copy()
+    img_gray = cv2.cvtColor(img_gray, cv2.COLOR_BGR2GRAY)
+    _, img_gray = cv2.threshold(img_gray, 45, 255, cv2.THRESH_BINARY)
+    # img_gray = cv2.bilateralFilter(img_gray, 5, 20, 20)
+    img_gray = cv2.GaussianBlur(img_gray, (5, 5), 0)
+
+    sobel_y = cv2.Sobel(img_gray, cv2.CV_64F, 0, 1, ksize=9)
+
+    opening = np.sqrt(sobel_y**2)
+    opening = (np.mean(opening, axis = 1)) - np.min(np.mean(opening, axis = 1))
+
+    rois = []
+    n_cont = 0
+    save_it = 0
+    pause_cont = 0
+
+    for i in opening:
+        if i > np.mean(opening) and n_cont > 50:
+            if pause_cont <= 0:
+                save_it = 1
+
+        if save_it:
+            rois.append(n_cont)
+            pause_cont = 100
+            save_it = 0
+
+        n_cont += 1
+        pause_cont -= 1 
+
+    rect_1 = Rectangle(x = 0, y = rois[0]-30, rz = 0, w = img_gray.shape[1], h = 70)
+    rect_2 = Rectangle(x = 0, y = rois[1]-30, rz = 0, w = img_gray.shape[1], h = 70)
+
+    roi_1 = rect_1.crop_from_img(img_gray)
+    roi_2 = rect_2.crop_from_img(img_gray)
+
+    l_Detector_1  = LineDetectorAll(9, True, False, True)
+    l_Detector_2  = LineDetectorAll(9, False, False, True)
+
+    line_1 = l_Detector_1.detect(roi_1)
+    line_2 = l_Detector_2.detect(roi_2)
+    line_1[2] = 0
+    line_2[2] = 0
+
+    # Scenes
+    scene_1 = Scene()
+    scene_1.add(rect_1, "rect_1", None)
+    scene_1.add(rect_2, "rect_2", None)
+    scene_1.add(line_1, "line_1", "rect_1")
+    scene_1.add(line_2, "line_2", "rect_2")
+
+    # Global lines
+    line_1_global = scene_1.get_global("line_1")
+    line_2_global = scene_1.get_global("line_2")
+
+    return((line_2_global[1] - line_1_global[1])/10)
+
+def dist_interna(img, px_cm):
+    imagem_rotacionada = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+
+    # Lembrar de mudar a ROI da imagem rotacionada na img_lines tbm
+    img_gray = imagem_rotacionada[100:imagem_rotacionada.shape[0], 120:350].copy()
+    img_gray = cv2.cvtColor(img_gray, cv2.COLOR_BGR2GRAY)
+    img_gray = cv2.bilateralFilter(img_gray, 5, 20, 20)
+
+    sobel_y = cv2.Sobel(img_gray, cv2.CV_64F, 0, 1, ksize=9)
+
+    opening = np.sqrt(sobel_y**2)
+    opening = (np.mean(opening, axis = 1)) - np.min(np.mean(opening, axis = 1))
+
+    rois = []
+    n_cont = 0
+    save_it = 0
+    pause_cont = 0
+
+    for i in opening:
+        if i > np.mean(opening)*7 and n_cont > 50:
+            if pause_cont <= 0:
+                save_it = 1
+
+        if save_it:
+            rois.append(n_cont)
+            pause_cont = 100
+            save_it = 0
+
+        n_cont += 1
+        pause_cont -= 1 
+
+    rect_1 = Rectangle(x = 0, y = rois[0]-20, rz = 0, w = 200, h = 120)
+    rect_2 = Rectangle(x = 0, y = rois[1]-20, rz = 0, w = 200, h = 120)
+
+    roi_1 = rect_1.crop_from_img(img_gray)
+    roi_2 = rect_2.crop_from_img(img_gray)
+
+    l_Detector_1  = LineDetectorAll(9, True, False, False)
+    l_Detector_2  = LineDetectorAll(9, False, False, False)
+
+    line_1 = l_Detector_1.detect(roi_1)
+    # line_1[2] = -7
+    line_2 = l_Detector_2.detect(roi_2)
+    # line_2[2] = -6
+
+    # Scenes
+    scene_1 = Scene()
+    scene_1.add(rect_1, "rect_1", None)
+    scene_1.add(rect_2, "rect_2", None)
+    scene_1.add(line_1, "line_1", "rect_1")
+    scene_1.add(line_2, "line_2", "rect_2")
+
+    # Global lines
+    line_1_global = scene_1.get_global("line_1")
+    line_2_global = scene_1.get_global("line_2")
+
+    img_lines = imagem_rotacionada[100:imagem_rotacionada.shape[0], 120:350].copy()
+    draw_line_1(roi_1, line_1, color=(255, 255, 255), linewidth=4, transparency=0.0)
+    draw_line_1(roi_2, line_2, color=(255, 255, 255), linewidth=4, transparency=0.0)
+    draw_line_1(img_lines, line_1_global, color=(255, 255, 255), linewidth=4, transparency=0.0)
+    draw_line_1(img_lines, line_2_global, color=(255, 255, 255), linewidth=4, transparency=0.0)
+
+    # Vertical line - visualization 
+    cv2.line(img_lines, (int(line_1_global[0]), int(line_1_global[1])), (int(line_2_global[0]), int(line_2_global[1])), (255, 255, 255), 4) 
+    
+    # Distance plot
+    distance_cm = (line_2_global[1] - line_1_global[1])/px_cm
+    distance_text = f" {distance_cm:.2f} cm"
+    cv2.putText(img_lines, distance_text, (int(line_2_global[0]), int((int(line_1_global[1])+int(line_2_global[1]))/2)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.38, (255, 255, 255), 1)
+
+
+    return(distance_cm, img_lines)
+
+
+
 
 def process_image(img):
     img_gray = img[400:800, 350:850]
