@@ -1,6 +1,6 @@
+import cv2
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import serial
 from threading import Thread
 from tkinter import *
 import tkinter.messagebox as MessageBox
@@ -11,7 +11,6 @@ from control.experiment_control import ExperimentControl
 from modules.timer import TimerSeconds
 
 # Constantes
-__arduino__ = False # False quando o Arduino não tiver conectado
 arduino_port = '/dev/ttyACM0'
 baud_rate = 9600
 thread_delay = 500 # ms
@@ -22,8 +21,6 @@ CT.set_default_color_theme("green")
 
 class Interface:
     def __init__(self, master) -> None:        
-        if __arduino__: 
-            self.arduino = serial.Serial(arduino_port, baud_rate)
         self.master = master
         self.sensor_readings_x = []
         self.sensor_readings_y = []
@@ -31,15 +28,17 @@ class Interface:
         self.speed = 0 # [1 ~ 255 PWM]
         self.dir = 0 # 0 -> esquerda, 1 -> direita
         self.experiment_ctrl = ExperimentControl()
-        self.max_time = 10 # [s]
+        self.max_time = 15 # [s]
         self.focus_value = 0 # 0 ~ 10
         self.force = 0.0
         self.distance = 0.0
+        self.read_thread = None
     
     def start(self) -> None:
-        print("[Interface] Iniciando experimento...")
+        self.experiment_ctrl.adjust_focus(5)
         # self.clean_all()
         if(not self.running):
+            print("[Interface] Iniciando experimento...")
             self.running = True
             # Thread para fazer leitura dos dados do Arduino
             self.read_thread = Thread(target=self.read_sensor)
@@ -73,11 +72,19 @@ class Interface:
         self.experiment_ctrl.start_experiment()
         timer = TimerSeconds()
         elapsed_time = timer.elapsed_time()
-        while elapsed_time < self.max_time:
+        last_addition = 0
+        while elapsed_time < self.max_time and self.running:
             try:
                 self.force = self.experiment_ctrl.get_force_reading()
                 self.distance = self.experiment_ctrl.get_measured_distance()
+                cv2.imshow("imagem", self.experiment_ctrl._vision_control._image_queue.get())
+                cv2.waitKey(1)
                 print(self.force, self.distance)
+                if self.force is None or self.distance is None:
+                    continue
+                elif float(self.distance) < last_addition:
+                    continue
+                last_addition = float(self.distance)
                 self.sensor_readings_x.append(float(self.distance))
                 self.sensor_readings_y.append(float(self.force))
                 progressbar.set(elapsed_time / self.max_time)
@@ -85,6 +92,9 @@ class Interface:
                 print(f"{exc}")
             time.sleep(0.07)
             elapsed_time = timer.elapsed_time()
+            print(elapsed_time)
+        progressbar.set(1)
+        cv2.destroyAllWindows()
         # self.experiment_ctrl.stop_experiment() # tá dentro de self.stop agora
         self.stop()
         
@@ -101,8 +111,8 @@ class Interface:
         self.ax.clear()
         # self.ax.plot(self.sensor_readings, color='green', linewidth=2, marker='o', markersize=5, label='Leitura do Sensor')
         self.ax.plot(self.sensor_readings_x, self.sensor_readings_y, color='green', linewidth=2, marker='o', markersize=5, label='Leitura do Sensor')
-        self.ax.set_xlabel('Distância')
-        self.ax.set_ylabel('Força')
+        self.ax.set_xlabel('Distância (mm)')
+        self.ax.set_ylabel('Força (mN)')
         self.ax.set_title('Leitura do Sensor em Tempo Real')
         self.ax.grid(True, linestyle='--', alpha=0.7)
         self.ax.legend(loc='upper right')

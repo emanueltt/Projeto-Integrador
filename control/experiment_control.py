@@ -30,7 +30,7 @@ class ExperimentControl:
         self._vision_control.stop_processing()
         self._arduino_control.stop_motor()
 
-    def adjust_focus(self, focus_value: int):
+    def adjust_focus(self, focus_value: int = 6):
         self._vision_control.adjust_camera_focus(focus_value)
 
     def calibrate(self):
@@ -51,6 +51,7 @@ def _focus_adjusting():
     while timer.elapsed_time() < 120:
         try:
             frame = vision_control._image_queue.get()
+            print(vision_control.get_measurement())
             if frame is not None:
                 cv2.imshow("image", frame)
 
@@ -71,6 +72,7 @@ def _focus_adjusting():
                 changed = False
         except Exception as exc:
             print(f"{exc}")
+    vision_control.stop_processing()
     cv2.destroyAllWindows()
 
 

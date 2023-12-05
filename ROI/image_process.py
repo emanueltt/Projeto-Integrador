@@ -1,4 +1,4 @@
-# Distacia linhas
+# Distância linhas
 import cv2
 import numpy as np
 from .libs.line_detector_all import LineDetectorAll
@@ -93,20 +93,22 @@ def process_image(img):
     return img_lines
 
 
-def process_image2(src):
+def process_image2(src: cv2.Mat, thresh1=40, thresh2=50):
     import math
-
-    dst = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+    dst = src.copy()
+    dst = cv2.cvtColor(dst, cv2.COLOR_BGR2GRAY)
 
     # Edge detection
-    dst = cv2.Canny(dst, 50, 255, None, 3)
+    dst = cv2.Canny(dst, thresh1, thresh2, None, 3)
 
     # Detect lines using the Hough Line Transform
     theta = np.pi/180
     lines = cv2.HoughLines(dst, 1, theta, threshold=0, max_theta=theta, min_theta=theta)
 
     if lines is None or len(lines) < 2:
-        return src
+        print("Lines is None or len(lines) < 2")
+        # return src
+        return None
 
     rho, theta = lines[0][0]
     a = math.cos(theta)
@@ -138,10 +140,12 @@ def process_image2(src):
         # Calculate distance between lines (e.g., closest points)
         distance = np.linalg.norm(np.array(line_base[0]) - np.array(line[0]))
 
-        if distance > 20:
+        if distance > 100:
             break
-    if distance < 20:
-        return src
+    if distance < 100:
+        print("Distance < 20")
+        # return src
+        return None
 
     ret = cv2.line(
         src,
@@ -161,7 +165,8 @@ def process_image2(src):
         color=(255, 255, 255),
         thickness=2
     )
-    return ret
+    return float(distance)
+    # return ret
 
 
 if __name__ == "__main__":
@@ -179,8 +184,8 @@ if __name__ == "__main__":
         frame_counter += 1
 
         # Define the coordinates of the top-left and bottom-right corners of the region you want to crop
-        x1, y1 = 200, 170  # Top-left corner
-        x2, y2 = 900, 360  # Bottom-right corner
+        x1, y1 = 50, 200  # Top-left corner
+        x2, y2 = 900, 270  # Bottom-right corner
 
         # Crop the region
         frame = frame[y1:y2, x1:x2]
@@ -193,10 +198,20 @@ if __name__ == "__main__":
             break
         elif key == -1:
             continue
+        # elif key == 81:  # Esquerda
+        #     th1 -= 1
+        # elif key == 83:  # Direita
+        #     th1 += 1
+        # elif key == 84:  # Baixo
+        #     th2 -= 1
+        # elif key == 82:  # Cima
+        #     th2 += 1
+        
         # elif key == 32:
         #     cv2.imwrite(f"image_{height}p_{frame_counter}.png", frame)
-        # else:
-        #     print(key)
+        else:
+            print(key)
+        # print(th1, th2)
 
     camera.release()
     cv2.destroyAllWindows()

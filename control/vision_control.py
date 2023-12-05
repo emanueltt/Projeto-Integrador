@@ -4,6 +4,8 @@ import threading as th
 import time
 import queue
 
+from ROI.image_process import process_image, process_image2
+
 
 class VisionControl:
     THREAD_TIMEOUT = 5  # in seconds
@@ -87,12 +89,25 @@ class VisionControl:
             _, frame = self._camera.read()
             if frame is None:
                 continue
-            self._try_add_image_to_queue(frame)
+
+            process_image = frame.copy()
+
+            # Define the coordinates of the top-left and bottom-right corners of the region you want to crop
+            x1, y1 = 50, 200  # Top-left corner
+            x2, y2 = 900, 270  # Bottom-right corner
+
+            # Crop the region
+            process_image = process_image[y1:y2, x1:x2]
 
             # Process image
+            process_result = process_image2(process_image)
+
+            frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            self._try_add_image_to_queue(frame)
+            if process_result is None:
+                continue
 
             # Put result into the queue
-            process_result = 10
             try:
                 self._measurement_data_queue.put_nowait(process_result)
             except queue.Full:
