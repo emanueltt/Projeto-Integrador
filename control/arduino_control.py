@@ -20,8 +20,11 @@ class ArduinoControl:
         if self._arduino_conn is not None:
             # Already connected
             return
-        self._arduino_conn = ArduinoConnection("/dev/ttyACM0")
-        self._arduino_conn.connect()
+        try:
+            self._arduino_conn = ArduinoConnection("/dev/ttyACM0")
+            self._arduino_conn.connect()
+        except Exception as e:
+            print(f"[ArduinoControl] {e}")
 
     def disconnect(self):
         self._running = False

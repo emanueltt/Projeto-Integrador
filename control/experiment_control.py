@@ -30,8 +30,8 @@ class ExperimentControl:
         self._vision_control.stop_processing()
         self._arduino_control.stop_motor()
 
-    def adjust_focus(self, target_focus: int = 2):
-        self._vision_control.adjust_camera_focus(target_focus)
+    def adjust_focus(self, focus_value: int):
+        self._vision_control.adjust_camera_focus(focus_value)
 
     def calibrate(self):
         self._vision_control.calibrate_camera()
