@@ -7,7 +7,7 @@ from .libs import draw_line_1
 
 # %matplotlib inline
 
-def calibra_px_cm(img):
+def calibration_px_cm(img):
     img_gray = img[100:450, 1220:img.shape[1]].copy()
     img_gray = cv2.cvtColor(img_gray, cv2.COLOR_BGR2GRAY)
     _, img_gray = cv2.threshold(img_gray, 45, 255, cv2.THRESH_BINARY)
@@ -64,7 +64,7 @@ def calibra_px_cm(img):
 
     return((line_2_global[1] - line_1_global[1])/10)
 
-def dist_interna(img, px_cm):
+def process_distance(img, px_cm):
     imagem_rotacionada = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
     # Lembrar de mudar a ROI da imagem rotacionada na img_lines tbm
