@@ -4,7 +4,8 @@ import threading as th
 import time
 import queue
 
-from ROI.image_process import process_image, process_image2
+# from ROI.image_process import process_image, process_image2
+from ROI.main_process import dist_interna
 
 
 class VisionControl:
@@ -41,15 +42,15 @@ class VisionControl:
         self._camera.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self._camera.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
-        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c auto_exposure=1')
+        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 --verbose -c auto_exposure=1')
         time.sleep(0.2)
-        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c focus_automatic_continuous=0')
+        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 --verbose -c focus_automatic_continuous=0')
         time.sleep(0.2)
-        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c exposure_time_absolute=500")
+        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 --verbose -c exposure_time_absolute=500")
         time.sleep(0.2)
         os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 --verbose -c white_balance_automatic=0")
         time.sleep(0.2)
-        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c white_balance_temperature=4150")
+        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 --verbose -c white_balance_temperature=4150")
 
     def disconnect(self):
         self._running = False
@@ -96,18 +97,18 @@ class VisionControl:
 
             process_image = frame.copy()
 
-            # Define the coordinates of the top-left and bottom-right corners of the region you want to crop
-            x1, y1 = 50, 200  # Top-left corner
-            x2, y2 = 1050, 270  # Bottom-right corner
+            # # Define the coordinates of the top-left and bottom-right corners of the region you want to crop
+            # x1, y1 = 50, 200  # Top-left corner
+            # x2, y2 = 1050, 270  # Bottom-right corner
 
-            # Crop the region
-            process_image = process_image[y1:y2, x1:x2]
+            # # Crop the region
+            # process_image = process_image[y1:y2, x1:x2]
 
             # Process image
-            process_result = process_image2(process_image)
+            process_result, ret_img = dist_interna(process_image)
 
-            frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
-            self._try_add_image_to_queue(frame)
+            # frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            self._try_add_image_to_queue(ret_img)
             if process_result is None:
                 continue
 
