@@ -7,16 +7,17 @@ void running_loop()
     // Setup motor
     DCMotor motor;
     motor.pinout(5, 6);
-    motor.forward();
+    motor.speed(200);
     
     LoadCell loadCell;
+    loadCell.tare();
     
+    motor.forward();
     // Envio leitura
     while (true)
     {
         // Lê sensor e envia valor
-        Serial.println(loadCell.read(5), 1);
-        delay(50);
+        Serial.println(loadCell.read(1), 1);
         
         // Lê comando do pc
         if (Serial.available() > 0)
@@ -39,14 +40,38 @@ void running_loop()
 
 void idle_loop()
 {
-    while (true)
+    bool idle = true;
+
+    // Setup motor
+    DCMotor motor;
+    motor.pinout(5, 6);
+    motor.speed(255);
+
+    while (idle)
     {
         // Lê comando do pc
         if (Serial.available() > 0)
         {
             char command = Serial.read();
-            if (command == 'S')
+            switch (command)
             {
+            case 'S':
+                idle = false;
+                break;
+
+            case 'A':
+                motor.backward();
+                delay(100);
+                motor.stop();
+                break;
+
+            case 'D':
+                motor.forward();
+                delay(100);
+                motor.stop();
+                break;
+
+            default:
                 break;
             }
         }

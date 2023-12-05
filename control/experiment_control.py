@@ -16,6 +16,12 @@ class ExperimentControl:
     def get_measured_distance(self):
         return self._vision_control.get_measurement()
 
+    def increase_stress(self):
+        self._arduino_control.spin_motor_anticlockwise()
+
+    def decrease_stress(self):
+        self._arduino_control.spin_motor_clockwise()
+
     def start_experiment(self):
         self._vision_control.start_processing()
         self._arduino_control.start_motor()
@@ -31,7 +37,7 @@ class ExperimentControl:
         self._vision_control.calibrate_camera()
 
 
-if __name__ == "__main__":
+def __testing():
     from modules.timer import TimerSeconds
     import time
 
@@ -39,10 +45,14 @@ if __name__ == "__main__":
 
     experiment_ctrl.start_experiment()
     timer = TimerSeconds()
-    while timer.elapsed_time() < 10:
+    while timer.elapsed_time() < 5:
         try:
+            # experiment_ctrl.decrease_stress()
             print(experiment_ctrl.get_force_reading(), experiment_ctrl.get_measured_distance())
         except Exception as exc:
             print(f"{exc}")
-        time.sleep(0.07)
+        time.sleep(0.5)
     experiment_ctrl.stop_experiment()
+
+if __name__ == "__main__":
+    __testing()

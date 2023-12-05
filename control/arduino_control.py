@@ -1,12 +1,13 @@
 from conexao_arduino.arduino_connection import ArduinoConnection
 
 import threading as th
+import time
 import queue
 
 
 class ArduinoControl:
     THREAD_TIMEOUT = 5  # in seconds
-    QUEUE_SIZE = 3
+    QUEUE_SIZE = 1
     
     def __init__(self):
         self._arduino_conn = None
@@ -36,10 +37,16 @@ class ArduinoControl:
 
     def read_sensor(self):
         try:
-            data = self._read_data_queue.get_nowait()
+            data = self._read_data_queue.get()
             return data
         except queue.Empty:
             return None
+        
+    def spin_motor_clockwise(self):
+        self._arduino_conn.send_data("A")
+
+    def spin_motor_anticlockwise(self):
+        self._arduino_conn.send_data("D")
 
     def start_motor(self):
         self._arduino_conn.send_data("S")
@@ -58,9 +65,13 @@ class ArduinoControl:
     def _sensor_reader(self):
         while self._running:
             try:
-                self._read_data_queue.put_nowait(self._arduino_conn.receive_data())
+                reading = self._arduino_conn.receive_data()
+                if reading is not None:
+                    reading = round(float(reading)/9.81, 2)
+                    self._read_data_queue.put_nowait(reading)
             except queue.Full:
-                continue
+                pass
+            time.sleep(0.1)
 
     def __del__(self):
         self.disconnect()
