@@ -37,7 +37,44 @@ class ExperimentControl:
         self._vision_control.calibrate_camera()
 
 
-def __testing():
+def _focus_adjusting():
+    from modules.timer import TimerSeconds
+    import cv2
+
+    vision_control = VisionControl()
+    vision_control.start_processing()
+
+    timer = TimerSeconds()
+    focus = 5
+    changed = True
+    print("Pressione ESC para parar. Utilize as setas para esquerda e direita para ajustar o foco")
+    while timer.elapsed_time() < 120:
+        try:
+            frame = vision_control._image_queue.get()
+            if frame is not None:
+                cv2.imshow("image", frame)
+
+            key = cv2.waitKey(1)
+            if key == 27:
+                break
+            elif key == 81:
+                focus -= 1
+                changed = True
+            elif key == 83:
+                focus += 1
+                changed = True
+            # else:
+            #     print(key)
+            if changed:
+                print(f"Foco atual: {focus}")
+                vision_control.adjust_camera_focus(focus)
+                changed = False
+        except Exception as exc:
+            print(f"{exc}")
+    cv2.destroyAllWindows()
+
+
+def _test_experiment():
     from modules.timer import TimerSeconds
     import time
 
@@ -55,4 +92,4 @@ def __testing():
     experiment_ctrl.stop_experiment()
 
 if __name__ == "__main__":
-    __testing()
+    _focus_adjusting()
