@@ -5,10 +5,10 @@
 
 class LoadCell
 {
-    const int LOADCELL_DOUT_PIN = 2;
-    const int LOADCELL_SCK_PIN = 3;
+    const int LOADCELL_DOUT_PIN = 12;
+    const int LOADCELL_SCK_PIN = 11;
 
-    float mScale = 2280.f;
+    float mScale = -103.595;
     HX711 loadCellSensor;
 
 public:

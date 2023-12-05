@@ -10,12 +10,13 @@ void running_loop()
     motor.forward();
     
     LoadCell loadCell;
+    loadCell.tare();
     
     // Envio leitura
     while (true)
     {
         // Lê sensor e envia valor
-        Serial.println(loadCell.read(5), 1);
+        Serial.println(loadCell.read(2), 1);
         delay(50);
         
         // Lê comando do pc
