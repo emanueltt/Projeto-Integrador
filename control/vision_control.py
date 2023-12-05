@@ -46,6 +46,10 @@ class VisionControl:
         os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c focus_automatic_continuous=0')
         time.sleep(0.2)
         os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c exposure_time_absolute=500")
+        time.sleep(0.2)
+        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 --verbose -c white_balance_automatic=0")
+        time.sleep(0.2)
+        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c white_balance_temperature=4150")
 
     def disconnect(self):
         self._running = False
@@ -94,7 +98,7 @@ class VisionControl:
 
             # Define the coordinates of the top-left and bottom-right corners of the region you want to crop
             x1, y1 = 50, 200  # Top-left corner
-            x2, y2 = 900, 270  # Bottom-right corner
+            x2, y2 = 1050, 270  # Bottom-right corner
 
             # Crop the region
             process_image = process_image[y1:y2, x1:x2]
