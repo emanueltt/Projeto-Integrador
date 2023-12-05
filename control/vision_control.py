@@ -20,12 +20,16 @@ class VisionControl:
         if self._camera is not None:
             # Already connected
             return
-        self._camera = cv2.VideoCapture("/dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0")
+        
+        try:
+            self._camera = cv2.VideoCapture("/dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0")
 
-        if not self._camera.isOpened():
-            raise ConnectionError("Could not connect to the camera!")
+            if not self._camera.isOpened():
+                raise ConnectionError("Could not connect to the camera!")
 
-        self._configure_camera()
+            self._configure_camera()
+        except Exception as e:
+            print(f"[VisionControl] {e}")
 
     def _configure_camera(self):
         height = 720
@@ -51,7 +55,7 @@ class VisionControl:
 
     def adjust_camera_focus(self, focus_value: int):
         if focus_value < 0 or focus_value > 10:
-            raise ValueError(f"Invalid focus_value. Valid value range is between 0 and 10.")
+            raise ValueError(f"[VisionControl] Invalid focus_value. Valid value range is between 0 and 10.")
         os.system(f"v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c focus_absolute={focus_value}")
 
     def calibrate_camera(self):

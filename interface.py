@@ -7,6 +7,8 @@ import tkinter.messagebox as MessageBox
 import customtkinter as CT
 import os
 import time
+from control.experiment_control import ExperimentControl
+from modules.timer import TimerSeconds
 
 # Constantes
 __arduino__ = False # False quando o Arduino não tiver conectado
@@ -23,84 +25,104 @@ class Interface:
         if __arduino__: 
             self.arduino = serial.Serial(arduino_port, baud_rate)
         self.master = master
-        self.sensor_readings = []
+        self.sensor_readings_x = []
+        self.sensor_readings_y = []
         self.running = False
-        self.time = 0 # em segundos
+        self.speed = 0 # [1 ~ 255 PWM]
         self.dir = 0 # 0 -> esquerda, 1 -> direita
+        self.experiment_ctrl = ExperimentControl()
+        self.max_time = 10 # [s]
+        self.focus_value = 0 # 0 ~ 10
+        self.force = 0.0
+        self.distance = 0.0
     
     def start(self) -> None:
-        print("Iniciando experimento...")
-        print("Acionando motor...")
+        print("[Interface] Iniciando experimento...")
         # self.clean_all()
-        if(not self.running):
-            if(self.time == 0):
-                MessageBox.showerror("Erro", "Tempo de Experimento não configurado")
-                # CTkMessagebox(title="Erro", message="Tempo de Experimento não configurado", icon="cancel")
-                return
-            self.running = True
-            # Thread para fazer leitura da serial do Arduino
-            self.read_thread = Thread(target=self.read_sensor)
-            self.read_thread.daemon = True
-            self.read_thread.start()
-            self.master.after(self.time * 1000, self.stop)
-            buttons[0].configure(text="Parar experimento")
-        else:
-            self.stop()
+        self.experiment_ctrl.start_experiment()
+        timer = TimerSeconds()
+        elapsed_time = timer.elapsed_time()
+        while elapsed_time < self.max_time:
+            try:
+                self.force = self.experiment_ctrl.get_force_reading()
+                self.distance = self.experiment_ctrl.get_measured_distance()
+                print(self.force, self.distance)
+                self.sensor_readings_x.append(float(self.distance))
+                self.sensor_readings_y.append(float(self.force))
+                progressbar.set(elapsed_time / self.max_time)
+            except Exception as exc:
+                print(f"{exc}")
+            time.sleep(0.07)
+            elapsed_time = timer.elapsed_time()
+        self.experiment_ctrl.stop_experiment()
+        # if(not self.running):
+        #     if(self.speed == 0):
+        #         MessageBox.showerror("Erro", "Velocidade do motor não configurado")
+        #         return
+        #     self.running = True
+        #     # Thread para fazer leitura da serial do Arduino
+        #     self.read_thread = Thread(target=self.read_sensor)
+        #     self.read_thread.daemon = True
+        #     self.read_thread.start()
+        #     self.master.after(self.time * 1000, self.stop)
+        #     buttons[0].configure(text="Parar experimento")
+        # else:
+        #     self.stop()
 
     def stop(self) -> None:
-        self.running = False
-        if hasattr(self, 'thread') and self.read_thread.is_alive():
-            self.read_thread.join()  # Wait for the thread to finish
-        buttons[0].configure(text="Iniciar experimento")
+        # self.running = False
+        # if hasattr(self, 'thread') and self.read_thread.is_alive():
+        #     self.read_thread.join()  # Wait for the thread to finish
+        # buttons[0].configure(text="Iniciar experimento")
+        self.experiment_ctrl.stop_experiment()
         MessageBox.showinfo("Info", "Teste finalizado")
 
     def change_dir(self) -> None:
-        print("Direção de movimento alterada")
+        print("[Interface] Direção de movimento alterada")
         self.dir = switch.get()
 
     def set_time(self) -> None:
-        dialog = CT.CTkInputDialog(text="Tempo de ensaio:", title="Configurar Tempo de Experimento")
+        dialog = CT.CTkInputDialog(text="Velocidade [1 ~ 255]:", title="Configurar Velocidade do Motor")
         try:
-            self.time = int(dialog.get_input())
-            print(f"Tempo de Experimento configurado: {self.time} [s]")
+            self.speed = int(dialog.get_input())
+            if(self.speed < 1 or self.speed > 255):
+                raise ValueError(f"Invalid speed value. Valid value range is between 1 and 255.")
+            print(f"[Interface] Velocidade do Motor configurado: {self.speed} [PWM]")
         except Exception as e:
-            print(f"[ERROR] {e}")
+            print(f"[Interface] {e}")
+            MessageBox.showerror("Erro", e)
 
     def calibrate(self) -> None:
-        print("Calibrando algoritmo de visão computacional")
+        print("[Interface] Calibrando algoritmo de visão computacional")
 
     def focus(self) -> None:
-        print("Focando câmera...")
-        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c auto_exposure=1')
-        time.sleep(0.2)
-        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c focus_automatic_continuous=0')
-        time.sleep(0.2)
-        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c exposure_time_absolute=500')
-        time.sleep(0.2)
-        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c focus_absolute=3')
-        time.sleep(0.2)
-        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c focus_absolute=4')
+        print("[Interface] Focando câmera...")
+        dialog_focus = CT.CTkInputDialog(text="Foco [0 ~ 10]:", title="Configurar Foco da Câmera")
+        try:
+            self.focus_value = int(dialog_focus.get_input())
+            print(f"[Interface] Foco da câmera configurado: {self.focus_value}")
+            self.experiment_ctrl.adjust_focus(self.focus_value)
+        except Exception as e:
+            print(f"{e}")
+            MessageBox.showerror("Erro", e)
     
     def read_sensor(self) -> None:
-        # while True:
-        for i in range(self.time):
+        while True:
             if(self.running):
                 try:
                     value = self.arduino.readline().strip().decode('utf-8')
-                    print(f"Luminosidade: {value} [%]")
+                    print(f"[Interface] Luminosidade: {value} [%]")
                     self.sensor_readings.append(float(value))
-                    progressbar.set((i + 1) / self.time)
+                    # progressbar.set((i + 1) / self.time)
                     # time.sleep(1)
                 except Exception as e:
-                    print(f"[ERROR] {e}")
+                    print(f"[Interface] {e}")
                     if(i == 5): self.sensor_readings.append(0.5)
                     else: self.sensor_readings.append(i) # adicionando dado fake, só pra testar o plot
-                    progressbar.set((i + 1) / self.time)
+                    # progressbar.set((i + 1) / self.time)
                     time.sleep(1)
                     pass
-        print("Experimento finalizado")
         
-    
     def create_plot(self) -> None:
         canvas_frame = CT.CTkFrame(frame)
         canvas_frame.grid(row=len(buttons) // 3 + 1, columnspan=2, pady=10)
@@ -128,9 +150,6 @@ class Interface:
 
 if __name__ == "__main__":
     root = CT.CTk()
-    
-    # experiment_ctrl = ExperimentControl()
-
     interface = Interface(root)
 
     screen_width = root.winfo_screenwidth()
@@ -144,7 +163,7 @@ if __name__ == "__main__":
 
     button_texts = [
         'Iniciar experimento',
-        'Configurar Tempo de Experimento',
+        'Configurar Velocidade do Motor',
         'Calibrar algoritmo',
         'Focar câmera'
     ]
