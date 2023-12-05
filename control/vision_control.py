@@ -12,6 +12,7 @@ class VisionControl:
     def __init__(self):
         self._camera = None
         self._measurement_data_queue = queue.Queue(self.QUEUE_SIZE)
+        self._image_queue = queue.Queue(self.QUEUE_SIZE)
         self._running = False
 
         self.connect()
@@ -82,6 +83,7 @@ class VisionControl:
             _, frame = self._camera.read()
             if frame is None:
                 continue
+            self._try_add_image_to_queue(frame)
 
             # Process image
 
@@ -91,6 +93,12 @@ class VisionControl:
                 self._measurement_data_queue.put_nowait(process_result)
             except queue.Full:
                 pass
+
+    def _try_add_image_to_queue(self, image):
+        try:
+            self._image_queue.put_nowait(image)
+        except queue.Full:
+            return
 
     def __del__(self):
         self.disconnect()
