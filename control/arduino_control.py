@@ -38,6 +38,12 @@ class ArduinoControl:
             return data
         except queue.Empty:
             return None
+        
+    def spin_motor_clockwise(self):
+        self._arduino_conn.send_data("A")
+
+    def spin_motor_anticlockwise(self):
+        self._arduino_conn.send_data("D")
 
     def start_motor(self):
         self._arduino_conn.send_data("S")
@@ -56,7 +62,10 @@ class ArduinoControl:
     def _sensor_reader(self):
         while self._running:
             try:
-                self._read_data_queue.put_nowait(self._arduino_conn.receive_data())
+                reading = self._arduino_conn.receive_data()
+                if reading is not None:
+                    reading = round(float(reading)/9.81, 2)
+                    self._read_data_queue.put_nowait(reading)
             except queue.Full:
                 pass
             time.sleep(0.1)
