@@ -40,34 +40,20 @@ class Interface:
         print("[Interface] Iniciando experimento...")
         # self.clean_all()
         if(not self.running):
-            # if(self.speed == 0):
-            #     MessageBox.showerror("Erro", "Velocidade do motor não configurado")
-            #     return
             self.running = True
             # Thread para fazer leitura dos dados do Arduino
             self.read_thread = Thread(target=self.read_sensor)
             self.read_thread.daemon = True
             self.read_thread.start()
-            # self.master.after(self.time * 1000, self.stop)
             buttons[0].configure(text="Parar experimento")
         else:
             self.stop()
 
     def stop(self) -> None:
         self.experiment_ctrl.stop_experiment()
+        self.running = False
         buttons[0].configure(text="Iniciar experimento")
         MessageBox.showinfo("Info", "Teste finalizado")
-
-    def set_time(self) -> None:
-        dialog = CT.CTkInputDialog(text="Velocidade [1 ~ 255]:", title="Configurar Velocidade do Motor")
-        try:
-            self.speed = int(dialog.get_input())
-            if(self.speed < 1 or self.speed > 255):
-                raise ValueError(f"Invalid speed value. Valid value range is between 1 and 255.")
-            print(f"[Interface] Velocidade do Motor configurado: {self.speed} [PWM]")
-        except Exception as e:
-            print(f"[Interface] {e}")
-            MessageBox.showerror("Erro", e)
 
     def calibrate(self) -> None:
         print("[Interface] Calibrando algoritmo de visão computacional")
@@ -104,7 +90,7 @@ class Interface:
         
     def create_plot(self) -> None:
         canvas_frame = CT.CTkFrame(frame)
-        canvas_frame.grid(row=len(buttons) // 3 + 1, columnspan=2, pady=10)
+        canvas_frame.grid(row=len(buttons) // 3 + 1, columnspan=3, pady=10)
         self.fig, self.ax = plt.subplots(figsize=(6, 4))
         self.ax.set_ylim([y_min, y_max])
         self.canvas = FigureCanvasTkAgg(self.fig, master=canvas_frame)
@@ -136,28 +122,31 @@ class Interface:
         self.experiment_ctrl.decrease_stress()
 
 if __name__ == "__main__":
+    #====================== Inicializa interface ==========================#
     root = CT.CTk()
     interface = Interface(root)
 
+    #====================== Tamanho da tela ==========================#
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
-
     root.geometry(f"{screen_width}x{screen_height}")
+
+    #====================== Título ==========================#
     root.title("Interface Ensaio de Tração")
 
+    #====================== Frame principal ==========================#
     frame = CT.CTkFrame(master=root)
     frame.pack(pady=20, padx=60, fill=BOTH, expand=True)
 
+    #====================== Botões principais ==========================#
     button_texts = [
         'Iniciar experimento',
-        'Configurar Velocidade do Motor',
         'Calibrar algoritmo',
         'Focar câmera',
     ]
 
     button_commands = [
         interface.start,
-        interface.set_time,
         interface.calibrate,
         interface.focus
     ]
@@ -165,6 +154,7 @@ if __name__ == "__main__":
     buttons = [CT.CTkButton(frame, text=text, width=200, height=60, command=cmd) 
                for text, cmd in zip(button_texts, button_commands)]
 
+    #====================== Posicionamento dos botões principais ==========================#
     for i, button in enumerate(buttons):
         row = i // 3
         col = i % 3
@@ -173,11 +163,13 @@ if __name__ == "__main__":
     for i in range(3):
         frame.columnconfigure(i, weight=1)
 
+    #====================== Comandos do plot ==========================#
     interface.create_plot()
     root.after(thread_delay, interface.update_plot)
 
+    #====================== Frame dos botões + e - ==========================#
     increase_decrease_frame = CT.CTkFrame(frame)
-    increase_decrease_frame.grid(row=1, column=1, columnspan=1, pady=10)
+    increase_decrease_frame.grid(row=1, column=0, columnspan=1, pady=10)
 
     increase_button = CT.CTkButton(increase_decrease_frame, text="+", width=100, height=60, command=interface.increase)
     increase_button.grid(row=0, column=0, padx=5)
@@ -185,14 +177,17 @@ if __name__ == "__main__":
     decrease_button = CT.CTkButton(increase_decrease_frame, text="-", width=100, height=60, command=interface.decrease)
     decrease_button.grid(row=0, column=1, padx=5)
 
+
+    #====================== Limpar ==========================#
     plot_button = CT.CTkButton(frame, text="Limpar", command=interface.clean_all)
-    plot_button.grid(row=len(buttons) // 3, column=2, pady=10)
+    plot_button.grid(row=len(buttons) // 3, column=1, pady=10)
 
     frame.columnconfigure(0, weight=1)
     frame.rowconfigure(len(buttons) // 3 + 1, weight=1)
 
+    #====================== Progress Bar ==========================#
     progress_var = CT.IntVar()
     progressbar = CT.CTkProgressBar(frame, variable=progress_var, mode='determinate')
-    progressbar.grid(row=len(buttons) // 3 + 1, column=2, padx=60, pady=10, sticky="ew")
+    progressbar.grid(row=len(buttons) // 3, column=2, padx=60, pady=10, sticky="ew")
 
     root.mainloop()
