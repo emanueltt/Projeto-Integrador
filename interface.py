@@ -120,6 +120,7 @@ class Interface:
         self.sensor_readings_y = []
         progressbar.set(0)
         self.ax.clear()
+        cv2.destroyAllWindows()
         # if(self.read_thread.is_alive()): self.read_thread.join()
 
     def increase(self) -> None:
