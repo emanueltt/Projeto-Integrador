@@ -62,7 +62,7 @@ def calibration_px_cm(img):
     line_1_global = scene_1.get_global("line_1")
     line_2_global = scene_1.get_global("line_2")
 
-    return((line_2_global[1] - line_1_global[1])/10)
+    return((line_2_global[1] - line_1_global[1])/10), sobel_y
 
 def process_distance(img, px_cm):
     imagem_rotacionada = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -136,9 +136,7 @@ def process_distance(img, px_cm):
                 cv2.FONT_HERSHEY_SIMPLEX, 0.38, (255, 255, 255), 1)
 
 
-    return(distance_cm, img_lines)
-
-
+    return (distance_cm, img_lines)
 
 
 def process_image(img):

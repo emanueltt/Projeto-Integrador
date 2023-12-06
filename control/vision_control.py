@@ -3,6 +3,7 @@ import os
 import threading as th
 import time
 import queue
+from ROI.image_process import calibration_px_cm, process_distance
 
 # from ROI.image_process import process_image, process_image2
 from ROI.main_process import dist_interna
@@ -42,15 +43,15 @@ class VisionControl:
         self._camera.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self._camera.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
-        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 --verbose -c auto_exposure=1')
+        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c auto_exposure=1')
         time.sleep(0.2)
-        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 --verbose -c focus_automatic_continuous=0')
+        os.system('v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c focus_automatic_continuous=0')
         time.sleep(0.2)
-        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 --verbose -c exposure_time_absolute=500")
+        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c exposure_time_absolute=500")
         time.sleep(0.2)
-        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 --verbose -c white_balance_automatic=0")
+        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c white_balance_automatic=0")
         time.sleep(0.2)
-        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 --verbose -c white_balance_temperature=4150")
+        os.system("v4l2-ctl -d /dev/v4l/by-id/usb-HP_HP_Webcam_HD-4110-video-index0 -c white_balance_temperature=4150")
 
     def disconnect(self):
         self._running = False
@@ -89,6 +90,8 @@ class VisionControl:
             self._processing_thread.join(self.THREAD_TIMEOUT)
 
     def _image_processor(self):
+        pixel_to_cm = None
+        process_result = None
         while self._running:
             # Read image
             _, frame = self._camera.read()
@@ -103,18 +106,23 @@ class VisionControl:
 
             # # Crop the region
             # process_image = process_image[y1:y2, x1:x2]
+            if pixel_to_cm is None:
+                pixel_to_cm, calibration_img = calibration_px_cm(process_image)
 
             # Process image
-            process_result, ret_img = dist_interna(process_image)
+            try:
+                process_result, ret_img = process_distance(process_image, pixel_to_cm)
+            except IndexError:
+                self._try_add_image_to_queue(process_image)
+            else:
+                self._try_add_image_to_queue(ret_img)
 
-            # frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
-            self._try_add_image_to_queue(ret_img)
             if process_result is None:
                 continue
 
             # Put result into the queue
             try:
-                self._measurement_data_queue.put_nowait(process_result)
+                self._measurement_data_queue.put_nowait(round(process_result, 2))
             except queue.Full:
                 pass
 
