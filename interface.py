@@ -5,7 +5,6 @@ from threading import Thread
 from tkinter import *
 import tkinter.messagebox as MessageBox
 import customtkinter as CT
-import os
 import time
 from control.experiment_control import ExperimentControl
 from modules.timer import TimerSeconds
@@ -51,8 +50,15 @@ class Interface:
         print("Teste finalizado")
         MessageBox.showinfo("Info", "Teste finalizado")
 
-    def calibrate(self) -> None:
-        print("[Interface] Calibrando algoritmo de visão computacional")
+    def set_time(self) -> None:
+        print("[Interface] Configurando tempo de experimento")
+        dialog_set_time = CT.CTkInputDialog(text="Tempo [s]:", title="Configurar tempo de experimento")
+        try:
+            self.max_time = int(dialog_set_time.get_input())
+            print(f"[Interface] Tempo configurado: {self.max_time} [s]")
+        except Exception as e:
+            print(f"{e}")
+            MessageBox.showerror("Erro", e)
 
     def focus(self) -> None:
         print("[Interface] Focando câmera...")
@@ -150,13 +156,13 @@ if __name__ == "__main__":
     #====================== Botões principais ==========================#
     button_texts = [
         'Iniciar experimento',
-        'Calibrar algoritmo',
+        'Configurar tempo do experimento',
         'Focar câmera',
     ]
 
     button_commands = [
         interface.start,
-        interface.calibrate,
+        interface.set_time,
         interface.focus
     ]
 
