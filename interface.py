@@ -78,10 +78,11 @@ class Interface:
         last_addition = 0
         while elapsed_time < self.max_time and self.running:
             try:
+                self.experiment_ctrl.adjust_focus(self.focus_value)
                 self.force = self.experiment_ctrl.get_force_reading()
                 self.distance = self.experiment_ctrl.get_measured_distance()
                 cv2.imshow("imagem", self.experiment_ctrl._vision_control._image_queue.get())
-                cv2.waitKey(1)
+                cv2.waitKey(2)
                 print(self.force, self.distance)
                 if self.force is None or self.distance is None:
                     continue
@@ -95,7 +96,6 @@ class Interface:
                 print(f"{exc}")
             time.sleep(0.07)
             elapsed_time = timer.elapsed_time()
-            print(elapsed_time)
         progressbar.set(1)
         cv2.destroyAllWindows()
         # self.experiment_ctrl.stop_experiment() # tá dentro de self.stop agora
@@ -116,7 +116,7 @@ class Interface:
         self.ax.set_ylabel('Força (mN)')
         self.ax.set_title('Leitura do Sensor em Tempo Real')
         self.ax.grid(True, linestyle='--', alpha=0.7)
-        self.ax.legend(loc='upper right')
+        self.ax.legend(loc='upper left')
         self.canvas.draw()
         self.master.after(thread_delay, self.update_plot)
 
@@ -126,6 +126,7 @@ class Interface:
         self.sensor_readings_y = []
         progressbar.set(0)
         self.ax.clear()
+        cv2.destroyAllWindows()
         # if(self.read_thread.is_alive()): self.read_thread.join()
 
     def increase(self) -> None:
