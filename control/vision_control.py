@@ -5,9 +5,6 @@ import time
 import queue
 from ROI.image_process import calibration_px_cm, process_distance
 
-# from ROI.image_process import process_image, process_image2
-from ROI.main_process import dist_interna
-
 
 class VisionControl:
     THREAD_TIMEOUT = 5  # in seconds
