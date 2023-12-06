@@ -1,3 +1,5 @@
+import os
+import queue
 import cv2
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -30,14 +32,15 @@ class Interface:
         self.read_thread = None
     
     def start(self) -> None:
-        print("[Interface] Iniciando experimento...")
         self.clean_all()
+        if self.read_thread is not None:
+            self.read_thread.join()
+            self.read_thread = None
         if(not self.running):
             print("[Interface] Iniciando experimento...")
             self.running = True
             # Thread para fazer leitura dos dados do Arduino
             self.read_thread = Thread(target=self.read_sensor)
-            self.read_thread.daemon = True
             self.read_thread.start()
             buttons[0].configure(text="Parar experimento")
         else:
@@ -77,12 +80,18 @@ class Interface:
         elapsed_time = timer.elapsed_time()
         last_addition = 0
         while elapsed_time < self.max_time and self.running:
+            elapsed_time = timer.elapsed_time()
+            print(f"elapsed_time = {elapsed_time}")
             try:
                 self.experiment_ctrl.adjust_focus(self.focus_value)
                 self.force = self.experiment_ctrl.get_force_reading()
                 self.distance = self.experiment_ctrl.get_measured_distance()
-                cv2.imshow("imagem", self.experiment_ctrl._vision_control._image_queue.get())
-                cv2.waitKey(2)
+                try:
+                    cv2.imshow("imagem", self.experiment_ctrl._vision_control._image_queue.get_nowait())
+                except queue.Empty:
+                    continue
+                
+                cv2.waitKey(1)
                 print(self.force, self.distance)
                 if self.force is None or self.distance is None:
                     continue
@@ -95,7 +104,6 @@ class Interface:
             except Exception as exc:
                 print(f"{exc}")
             time.sleep(0.07)
-            elapsed_time = timer.elapsed_time()
         progressbar.set(1)
         cv2.destroyAllWindows()
         # self.experiment_ctrl.stop_experiment() # tá dentro de self.stop agora
@@ -138,6 +146,11 @@ class Interface:
         self.experiment_ctrl.decrease_stress()
 
 if __name__ == "__main__":
+    try:
+        os.system("sudo chmod 666 /dev/ttyACM0")
+    except Exception as exc:
+        print(exc)
+
     #====================== Inicializa interface ==========================#
     root = CT.CTk()
     interface = Interface(root)
