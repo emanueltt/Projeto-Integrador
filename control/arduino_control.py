@@ -53,15 +53,22 @@ class ArduinoControl:
         if not self._running:
             self._running = True
             self._reader_thread = th.Thread(target=self._sensor_reader)
-            self._reader_thread.daemon = True
             self._reader_thread.start()
 
     def stop_motor(self):
         self._arduino_conn.send_data("P")
         if self._running:
             self._running = False
-            self._reader_thread.join(self.THREAD_TIMEOUT)
-    
+            self._clear_queue()
+            self._reader_thread.join()
+
+    def _clear_queue(self):
+        while True:
+            try:
+                self._read_data_queue.get_nowait()
+            except queue.Empty:
+                break
+
     def _sensor_reader(self):
         while self._running:
             try:

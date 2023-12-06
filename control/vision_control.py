@@ -78,13 +78,20 @@ class VisionControl:
         if not self._running:
             self._running = True
             self._processing_thread = th.Thread(target=self._image_processor)
-            self._processing_thread.daemon = True
             self._processing_thread.start()
 
     def stop_processing(self):
         if self._running:
             self._running = False
-            self._processing_thread.join(self.THREAD_TIMEOUT)
+            self._clear_queue()
+            self._processing_thread.join()
+
+    def _clear_queue(self):
+        while True:
+            try:
+                self._measurement_data_queue.get_nowait()
+            except queue.Empty:
+                break
 
     def _image_processor(self):
         pixel_to_cm = None
@@ -103,8 +110,12 @@ class VisionControl:
 
             # # Crop the region
             # process_image = process_image[y1:y2, x1:x2]
-            if pixel_to_cm is None:
-                pixel_to_cm, calibration_img = calibration_px_cm(process_image)
+            try:
+                if pixel_to_cm is None:
+                    pixel_to_cm, calibration_img = calibration_px_cm(process_image)
+            except Exception as exc:
+                print(f"Calibration error: {exc}")
+                continue
 
             # Process image
             try:
